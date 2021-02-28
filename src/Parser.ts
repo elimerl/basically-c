@@ -1,6 +1,6 @@
 import { Token, tokenize } from "./Lexer";
-const types = ["int", "float"];
-const operators = ["*", "/", "+", "-"];
+const types = ["int", "float", "void"];
+const operators = ["star", "forwardslash", "plus", "minus"];
 export class Parser {
   current: number;
   constructor(readonly tokens: Token[]) {
@@ -24,16 +24,16 @@ export class Parser {
         const fnType = this.read().value;
         currentFn = this.read().value;
         this.read();
-        const args: { type: "int" | "float"; name: string }[] = [];
+        const args: { type: "int" | "float" | "void"; name: string }[] = [];
         while (this.peek().value !== ")") {
           const argType = this.read().value;
           const arg = this.read().value;
-          args.push({ type: argType as "int" | "float", name: arg });
+          args.push({ type: argType as "int" | "float" | "void", name: arg });
         }
         this.read();
         functions[currentFn] = {
           name: currentFn,
-          returnType: fnType as "int" | "float",
+          returnType: fnType as "int" | "float" | "void",
           body: [],
           args: args,
         };
@@ -62,8 +62,8 @@ export class Parser {
       this.read();
       return node;
     } else if (
-      this.peek().type === "number" &&
-      operators.includes(this.peek(2).value) &&
+      (this.peek().type === "number" || this.peek().type === "name") &&
+      operators.includes(this.peek(2).type) &&
       binExp
     ) {
       const left = this.readNode(false);
@@ -85,6 +85,36 @@ export class Parser {
     } else if (this.peek().type === "semi") {
       this.read();
       return this.readNode();
+    } else if (this.peek().value === "return") {
+      this.read();
+      return { type: "Return", value: this.readNode() };
+    } else if (
+      types.includes(this.peek().value) &&
+      this.peek(2).type === "name" &&
+      this.peek(3).value === "="
+    ) {
+      const type = this.read().value;
+      const name = this.read().value;
+      this.read();
+      const value = this.readNode();
+      if (this.peek().type === "semi") this.read();
+      return {
+        type: "VariableDefinition",
+        name,
+        varType: type as "int" | "float",
+        value,
+      };
+    } else if (operators.includes(this.peek().type)) {
+      this.current -= 2;
+      return this.readNode();
+    } else if (this.peek().value === "=") {
+      this.read();
+      return this.readNode();
+    } else if (
+      // always put this one at the end of the if
+      this.peek().type === "name"
+    ) {
+      return { type: "VariableUsage", name: this.read().value };
     }
   }
   static ast(tokens: Token[]): { [key: string]: fn } {
@@ -93,12 +123,18 @@ export class Parser {
   }
 }
 export interface fn {
-  returnType: "int" | "float";
+  returnType: "int" | "float" | "void";
   name: string;
   body: Node[];
-  args: { type: "int" | "float"; name: string }[];
+  args: { type: "int" | "float" | "void"; name: string }[];
 }
-export type Node = Call | BinaryExpression | NumberLiteral;
+export type Node =
+  | Call
+  | BinaryExpression
+  | Return
+  | NumberLiteral
+  | VariableDefinition
+  | VariableUsage;
 export interface Call {
   type: "Call";
   function: string;
@@ -113,4 +149,18 @@ export interface BinaryExpression {
 export interface NumberLiteral {
   type: "NumberLiteral";
   value: number;
+}
+export interface Return {
+  type: "Return";
+  value: Node;
+}
+export interface VariableDefinition {
+  type: "VariableDefinition";
+  name: string;
+  value: Node;
+  varType: "int" | "float";
+}
+export interface VariableUsage {
+  type: "VariableUsage";
+  name: string;
 }
