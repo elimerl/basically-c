@@ -12,3 +12,10 @@ int main() {
 ## Usage
 
 Clone the repository, then install dependencies.
+
+```sh
+yarn install
+tsc
+chmod +x ./lib/cli.js
+./lib/cli.js test.c
+```

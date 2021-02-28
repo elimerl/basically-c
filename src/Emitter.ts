@@ -52,6 +52,7 @@ export class Emitter {
       });
 
       function evalNode(node: Node): number[] {
+        if (!node) return [];
         switch (node.type) {
           case "Call":
             return [
