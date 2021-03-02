@@ -13,5 +13,5 @@
 	},
 	"dependencies": {
 		"binaryen": "^99.0.0"
-	}
+	},"license":"MIT"
 }
