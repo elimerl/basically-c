@@ -21,27 +21,15 @@ export class Emitter {
     Object.keys(ast).forEach((fnName) => {
       const fn = ast[fnName];
       const args = fn.args.map((arg) => {
-        return arg.type === "int"
-          ? binaryen.i32
-          : arg.type === "float"
-          ? binaryen.f32
-          : binaryen.none;
+        return typeToBinaryen(arg.type);
       });
-      const returnType =
-        fn.returnType === "int"
-          ? binaryen.i32
-          : fn.returnType === "float"
-          ? binaryen.f32
-          : binaryen.none;
+      const returnType = typeToBinaryen(fn.returnType);
       const locals: number[] = [];
       let varMem = args.length;
       fn.body.forEach((node) => {
         if (node.type === "VariableDefinition") {
           varToMemoryMap.set(node.name, varMem++);
-          varTypes.set(
-            node.name,
-            node.varType === "int" ? binaryen.i32 : binaryen.f32
-          );
+          varTypes.set(node.name, typeToBinaryen(node.varType));
           locals.push(varTypes.get(node.name));
         }
       });
@@ -51,7 +39,7 @@ export class Emitter {
         block.push(...evalNode(node));
       });
 
-      function evalNode(node: Node): number[] {
+      function evalNode(node: Node, desiredType = "i32"): number[] {
         if (!node) return [];
         switch (node.type) {
           case "Call":
@@ -61,35 +49,43 @@ export class Emitter {
             break;
           case "BinaryExpression":
             const { left, right } = node;
-            if (
-              left.type === "NumberLiteral" &&
-              right.type === "NumberLiteral"
-            ) {
-              return [
-                module.i32[
-                  node.operator === "+"
-                    ? "add"
-                    : node.operator === "-"
-                    ? "sub"
-                    : node.operator === "*"
-                    ? "mul"
-                    : "div_s"
-                ](module.i32.const(left.value), module.i32.const(right.value)),
-              ];
-            }
+            return [
+              module[desiredType][
+                node.operator === "+"
+                  ? "add"
+                  : node.operator === "-"
+                  ? "sub"
+                  : node.operator === "*"
+                  ? "mul"
+                  : "div_s"
+              ](
+                evalNode(left, desiredType)[0],
+                evalNode(right, desiredType)[0]
+              ),
+            ];
           case "Return":
             return [
               module.local.set(
                 currentMemLoc,
                 evalNode((node as Return).value)[0]
               ),
-              module.return(module.local.get(currentMemLoc++, binaryen.i32)),
+
+              module.return(
+                module.local.get(currentMemLoc++, typeToBinaryen(fn.returnType))
+              ),
             ];
           case "VariableDefinition":
             return [
               module.local.set(
                 varToMemoryMap.get(node.name),
-                evalNode(node.value)[0]
+                evalNode(
+                  node.value,
+                  node.varType === "int"
+                    ? "i32"
+                    : node.varType === "float"
+                    ? "f32"
+                    : "f64"
+                )[0]
               ),
             ];
           case "VariableUsage":
@@ -100,7 +96,7 @@ export class Emitter {
               ),
             ];
           case "NumberLiteral":
-            return [module.i32.const(node.value)];
+            return [module[desiredType].const(node.value)];
         }
       }
 
@@ -116,10 +112,23 @@ export class Emitter {
     });
     // Optimize the module using default passes and levels
     module.optimize();
+
     // Validate the module
     if (!module.validate()) throw new Error("validation error");
-
     var wasmData = module.emitBinary();
     return wasmData;
+  }
+}
+function typeToBinaryen(type: "int" | "float" | "double" | "void" | "double") {
+  switch (type) {
+    case "int":
+      return binaryen.i32;
+
+    case "float":
+      return binaryen.f32;
+    case "void":
+      return binaryen.none;
+    case "double":
+      return binaryen.f64;
   }
 }

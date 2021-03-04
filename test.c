@@ -1,5 +1,6 @@
-int main()
+double main()
 {
-	int a = 3 * 3;
-	return a;
+	double a = 3 + 3;
+	double b = a * a;
+	return b;
 }

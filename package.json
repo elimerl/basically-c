@@ -12,6 +12,8 @@
 		"build": "tsc"
 	},
 	"dependencies": {
-		"binaryen": "^99.0.0"
+		"@types/yargs": "^16.0.0",
+		"binaryen": "^99.0.0",
+		"yargs": "^16.2.0"
 	}
 }

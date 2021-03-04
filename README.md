@@ -2,12 +2,20 @@
 
 A not-quite C compiler to WASM I wrote for fun. It only supports integers and floats.
 
-```c
+```cpp
 int main() {
-	printf(3 + 3);
-	return 0;
+	int a = 3;
+	printf(a + a);
+	return a * a;
 }
 ```
+
+## Features
+
+- [x] Ints, floats, and doubles!
+- [x] Basic optimization! (Courtesy of [Binaryen's optimizer](https://github.com/WebAssembly/binaryen#binaryen-optimizations))
+- [] Control flow (will do soon)
+- [] Call into arbitrary JS functions (hard-ish)
 
 ## Usage
 

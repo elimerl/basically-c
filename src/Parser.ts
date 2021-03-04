@@ -1,5 +1,5 @@
 import { Token, tokenize } from "./Lexer";
-const types = ["int", "float", "void"];
+const types = ["int", "float", "void", "double"];
 const operators = ["star", "forwardslash", "plus", "minus"];
 export class Parser {
   current: number;
@@ -24,16 +24,22 @@ export class Parser {
         const fnType = this.read().value;
         currentFn = this.read().value;
         this.read();
-        const args: { type: "int" | "float" | "void"; name: string }[] = [];
+        const args: {
+          type: "int" | "float" | "double" | "void" | "double";
+          name: string;
+        }[] = [];
         while (this.peek().value !== ")") {
           const argType = this.read().value;
           const arg = this.read().value;
-          args.push({ type: argType as "int" | "float" | "void", name: arg });
+          args.push({
+            type: argType as "int" | "float" | "double" | "void" | "double",
+            name: arg,
+          });
         }
         this.read();
         functions[currentFn] = {
           name: currentFn,
-          returnType: fnType as "int" | "float" | "void",
+          returnType: fnType as "int" | "float" | "double" | "void" | "double",
           body: [],
           args: args,
         };
@@ -79,7 +85,7 @@ export class Parser {
     } else if (this.peek().type === "number") {
       const node: NumberLiteral = {
         type: "NumberLiteral",
-        value: parseInt(this.read().value),
+        value: parseFloat(this.read().value),
       };
       return node;
     } else if (this.peek().type === "semi") {
@@ -101,7 +107,7 @@ export class Parser {
       return {
         type: "VariableDefinition",
         name,
-        varType: type as "int" | "float",
+        varType: type as "int" | "float" | "double",
         value,
       };
     } else if (operators.includes(this.peek().type)) {
@@ -123,10 +129,13 @@ export class Parser {
   }
 }
 export interface fn {
-  returnType: "int" | "float" | "void";
+  returnType: "int" | "float" | "double" | "void" | "double";
   name: string;
   body: Node[];
-  args: { type: "int" | "float" | "void"; name: string }[];
+  args: {
+    type: "int" | "float" | "double" | "void" | "double";
+    name: string;
+  }[];
 }
 export type Node =
   | Call
@@ -158,7 +167,7 @@ export interface VariableDefinition {
   type: "VariableDefinition";
   name: string;
   value: Node;
-  varType: "int" | "float";
+  varType: "int" | "float" | "double";
 }
 export interface VariableUsage {
   type: "VariableUsage";
